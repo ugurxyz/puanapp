@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deneme</title>
+<link rel="stylesheet" href="ortak.css">
+<style>
+  .dh, .dr { display: grid; grid-template-columns: 1fr 64px 64px 56px; gap: 6px; align-items: center; }
+  .dh { color: #888; font-size: 12px; text-align: center; padding: 0 0 4px; }
+  .dh span:first-child { text-align: left; }
+  .dr { margin-top: 6px; padding: 6px 8px; background: var(--card); border: 1px solid transparent; border-radius: 10px; }
+  .dr.hata { border-color: #f87171; }
+  .dr span { font-size: 14px; color: #ddd; }
+  .dr input { padding: 8px 4px; font-size: 16px; text-align: center; }
+  .dr b { text-align: center; font-size: 15px; }
+  .toplam { margin-top: 14px; padding: 16px; text-align: center; background: var(--card); border-radius: 12px; }
+  .toplam .big { font-size: 44px; font-weight: 700; line-height: 1; }
+  .toplam .alt { margin-top: 8px; color: #aaa; font-size: 13px; }
+  .k { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .k:first-child { border-top: 0; }
+  .k .no { color: #777; width: 28px; }
+  .k .ad { flex: 1; min-width: 0; }
+  .k .ad small { display: block; }
+  .k .net { font-weight: 700; font-size: 16px; }
+  .k button { padding: 6px 10px; background: #2a2e38; color: #f87171; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Deneme Kayıtları</h1>
+
+  <div class="seg" id="seg">
+    <button data-t="TYT" class="on">TYT</button>
+    <button data-t="AYT">AYT</button>
+  </div>
+
+  <label for="ad">Deneme adı <small>(isteğe bağlı)</small></label>
+  <input id="ad" type="text" maxlength="40" placeholder="örn. Limit Yayınları 3">
+
+  <div style="margin-top:14px">
+    <div class="dh"><span>Ders</span><span>Doğru</span><span>Yanlış</span><span>Net</span></div>
+    <div id="satirlar"></div>
+  </div>
+
+  <div class="toplam">
+    <div class="big" id="toplamNet">0</div>
+    <div class="alt" id="toplamAlt"></div>
+  </div>
+
+  <button id="kaydet" class="ana" disabled>Denemeyi Kaydet</button>
+  <div id="durum" class="durum"></div>
+
+  <h2 id="baslikListe">Denemeler</h2>
+  <div class="chart" id="chart"></div>
+
+  <h2>Karşılaştırma</h2>
+  <div class="kars" id="kars"></div>
+
+  <h2>Kayıtlar</h2>
+  <div class="panel" id="kayitlar"></div>
+</div>
+
+<script src="ortak.js"></script>
+<script>
+  navCiz('p2');
+
+  const K = ANAHTAR.deneme;
+  // Sayısal alan: TYT (120 soru), AYT sayısal (80 soru)
+  const TURLER = {
+    TYT: [['Türkçe', 40], ['Sosyal Bilimler', 20], ['Temel Matematik', 40], ['Fen Bilimleri', 20]],
+    AYT: [['Matematik', 40], ['Fizik', 14], ['Kimya', 13], ['Biyoloji', 13]]
+  };
+  let tur = 'TYT';
+  const giris = { TYT: {}, AYT: {} }; // giris[tur][i] = { d, y }
+  let mevcut = { D: 0, Y: 0 };
+
+  const maxToplam = t => TURLER[t].reduce((a, d) => a + d[1], 0);
+  const num = v => Number(v.toFixed(2));
+
+  function satirlariCiz() {
+    $('satirlar').innerHTML = TURLER[tur].map(([ad, max], i) => {
+      const g = giris[tur][i] || {};
+      return `<div class="dr" id="dr${i}"><span>${ad} <small>/${max}</small></span>` +
+        `<input type="number" min="0" max="${max}" inputmode="numeric" data-i="${i}" data-a="d" placeholder="0" value="${g.d == null ? '' : esc(g.d)}">` +
+        `<input type="number" min="0" max="${max}" inputmode="numeric" data-i="${i}" data-a="y" placeholder="0" value="${g.y == null ? '' : esc(g.y)}">` +
+        `<b id="net${i}">0</b></div>`;
+    }).join('');
+    $('satirlar').querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => {
+      const i = +inp.dataset.i;
+      giris[tur][i] = giris[tur][i] || {};
+      giris[tur][i][inp.dataset.a] = inp.value;
+      hesapla();
+    }));
+    hesapla();
+  }
+
+  // net = doğru − yanlış/4
+  function hesapla() {
+    let net = 0, D = 0, Y = 0;
+    const maxT = maxToplam(tur);
+    const dersler = TURLER[tur].map(([ad, max], i) => {
+      const g = giris[tur][i] || {};
+      const hamD = clamp(g.d, 0, Infinity), hamY = clamp(g.y, 0, Infinity);
+      const d = Math.min(max, Math.floor(hamD));
+      const y = Math.min(max - d, Math.floor(hamY));
+      const n = d - y / 4;
+      net += n; D += d; Y += y;
+      $('dr' + i).classList.toggle('hata', hamD + hamY > max);
+      $('net' + i).textContent = num(n);
+      return { ad, max, d, y, net: n };
+    });
+    mevcut = { tur, dersler, net, D, Y, max: maxT };
+    $('toplamNet').textContent = num(net);
+    $('toplamAlt').textContent = `${D} doğru · ${Y} yanlış · ${maxT - D - Y} boş · %${(net / maxT * 100).toFixed(1)}`;
+    $('kaydet').disabled = (D + Y) === 0;
+  }
+
+  function kaydet() {
+    if (mevcut.D + mevcut.Y === 0) return;
+    const l = diziOku(K);
+    l.push({ id: yeniId(), tur: mevcut.tur, ad: $('ad').value.trim(), dersler: mevcut.dersler, net: mevcut.net, max: mevcut.max });
+    yaz(K, l);
+    giris[tur] = {};
+    $('ad').value = '';
+    satirlariCiz();               // girişler temizlenir, çift kayıt olmaz
+    $('durum').textContent = tur + ' denemesi kaydedildi';
+    ciz();
+  }
+
+  function ciz() {
+    const l = diziOku(K).filter(k => k.tur === tur);
+    $('baslikListe').textContent = tur + ' denemeleri (' + l.length + ')';
+    cizgiGrafik($('chart'), l.map(k => k.net), { max: maxToplam(tur), adim: maxToplam(tur) / 4 });
+
+    // kayıt listesi (yeniden eskiye)
+    $('kayitlar').innerHTML = l.length ? l.slice().reverse().map((k, ri) => {
+      const D = k.dersler.reduce((a, d) => a + d.d, 0), Y = k.dersler.reduce((a, d) => a + d.y, 0);
+      return `<div class="k"><span class="no">#${l.length - ri}</span>` +
+        `<span class="ad">${k.ad ? esc(k.ad) : tur + ' denemesi'}<small>${D}D · ${Y}Y</small></span>` +
+        `<span class="net">${num(k.net)}</span><button data-id="${esc(k.id)}">✕</button></div>`;
+    }).join('') : '<div class="bos">Henüz deneme yok</div>';
+
+    karsilastir(l);
+  }
+
+  function karsilastir(l) {
+    const el = $('kars');
+    if (!l.length) { el.innerHTML = '<div class="bos">Henüz deneme yok</div>'; return; }
+    const n = l.length, son = l[n - 1];
+    const ort = a => a.reduce((t, v) => t + v, 0) / a.length;
+
+    let h = '<table><tr><th>Ders</th><th>Ort. net</th><th>Son</th><th>Fark</th></tr>';
+    TURLER[tur].forEach(([ad]) => {
+      const vals = l.map(k => (k.dersler.find(d => d.ad === ad) || {}).net).filter(v => typeof v === 'number');
+      if (!vals.length) return;
+      const o = ort(vals), s = vals[vals.length - 1];
+      h += `<tr><td>${ad}</td><td>${num(o)}</td><td>${num(s)}</td><td>${n > 1 ? farkHtml(s, o) : ''}</td></tr>`;
+    });
+    const toplamOrt = ort(l.map(k => k.net));
+    h += `<tr><td><b>Toplam</b></td><td>${num(toplamOrt)}</td><td>${num(son.net)}</td><td>${n > 1 ? farkHtml(son.net, toplamOrt) : ''}</td></tr></table>`;
+
+    const en = Math.max(...l.map(k => k.net));
+    h += `<div class="alt">` +
+      (n > 1 ? `Önceki denemeye göre: ${farkHtml(son.net, l[n - 2].net)} (${num(l[n - 2].net)} → ${num(son.net)})<br>` : '') +
+      `En iyi net: <b>${num(en)}</b> · Deneme sayısı: <b>${n}</b></div>`;
+    el.innerHTML = h;
+  }
+
+  // ---- Olaylar ----
+  $('seg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    tur = b.dataset.t;
+    $('seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    satirlariCiz();
+    ciz();
+  });
+  $('kaydet').addEventListener('click', kaydet);
+  $('kayitlar').addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]');
+    if (!b) return;
+    if (!confirm('Bu deneme kaydı silinsin mi?')) return;
+    yaz(K, diziOku(K).filter(k => k.id !== b.dataset.id));
+    $('durum').textContent = 'Deneme silindi';
+    ciz();
+  });
+
+  satirlariCiz();
+  ciz();
+</script>
+</body>
+</html>

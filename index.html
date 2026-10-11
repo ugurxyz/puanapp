@@ -2,494 +2,148 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Performans Puanı</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Takip">
+<title>Çalışma Takibi</title>
+<link rel="stylesheet" href="ortak.css">
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 20px;
-    font-family: system-ui, sans-serif;
-    background: #0f1115; color: #e8e8e8;
-    display: flex; justify-content: center;
+  .kart {
+    display: block; margin-top: 12px; padding: 16px; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
   }
-  .card { width: 100%; max-width: 420px; }
-  h1 { font-size: 20px; margin: 0 0 16px; }
-  h2 { font-size: 16px; margin: 28px 0 8px; }
-  label { display: block; margin: 14px 0 4px; font-size: 14px; color: #aaa; }
-  input[type=number] {
-    width: 100%; padding: 12px; font-size: 18px;
-    background: #1a1d24; color: #fff;
-    border: 1px solid #333; border-radius: 8px;
-  }
-  .row { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: #aaa; }
-  .row b { color: #fff; }
-  .result {
-    margin-top: 24px; padding: 20px; text-align: center;
-    background: #1a1d24; border-radius: 12px;
-  }
-  .bekle { padding: 28px 8px; color: #777; font-size: 14px; }
-  .soz {
-    min-height: 44px; margin-bottom: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; line-height: 1.4; font-style: italic; color: #cfd6e4;
-  }
-  .yazar { margin-bottom: 16px; font-size: 13px; color: #8a94a8; }
-  .big { font-size: 64px; font-weight: 700; line-height: 1; }
-  .pct { margin-top: 8px; color: #aaa; font-size: 16px; }
-  .bar { height: 8px; background: #2a2e38; border-radius: 4px; margin-top: 14px; overflow: hidden; }
-  .fill { height: 100%; width: 0; transition: width .2s, background .2s; }
-  .btns { display: flex; gap: 8px; margin-top: 16px; }
-  button {
-    padding: 14px; font-size: 15px; font-weight: 600;
-    border: 0; border-radius: 8px; cursor: pointer;
-  }
-  button.ana { width: 100%; margin-top: 18px; background: #22a559; color: #fff; font-size: 17px; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  #kaydet { flex: 1; background: #3b82f6; color: #fff; }
-  #sil { background: #2a2e38; color: #ccc; }
-  #temizle { background: #5b1f24; color: #ffd7d7; }
-  #durum { min-height: 18px; margin-top: 8px; font-size: 13px; color: #8ad; text-align: center; }
-  .chart { background: #1a1d24; border-radius: 12px; padding: 8px; }
-  .chart svg { width: 100%; height: auto; display: block; }
-  .bos { padding: 24px; text-align: center; color: #777; font-size: 14px; }
-  .wrap { display: flex; gap: 8px; align-items: flex-start; }
-  .wrap .chart { flex: 1; min-width: 0; }
-  .liste {
-    width: 112px; max-height: 260px; overflow-y: auto;
-    background: #1a1d24; border-radius: 12px; padding: 8px; font-size: 13px;
-  }
-  .lh { color: #888; font-size: 12px; margin-bottom: 6px; }
-  .li, .lw { display: flex; justify-content: space-between; padding: 3px 0; }
-  .li span { color: #aaa; }
-  .lw {
-    margin: 4px 0; padding: 5px 6px; border-radius: 6px;
-    background: #1e3a5f; color: #cfe3ff; font-weight: 600; font-size: 12px;
-  }
-  .lk { margin-top: 6px; color: #777; font-size: 12px; text-align: center; }
-  .kars { margin-top: 8px; background: #1a1d24; border-radius: 12px; padding: 12px; font-size: 13px; }
-  .kars table { width: 100%; border-collapse: collapse; }
-  .kars th { color: #888; font-weight: 500; font-size: 12px; text-align: right; padding: 4px 0; }
-  .kars th:first-child, .kars td:first-child { text-align: left; }
-  .kars td { padding: 6px 0; text-align: right; border-top: 1px solid #262a33; color: #e8e8e8; }
-  .kars td:first-child { color: #aaa; }
-  .kars .up { color: #4ade80; } .kars .dw { color: #f87171; } .kars .dn { color: #888; }
-  .kars .alt { margin-top: 10px; padding-top: 8px; border-top: 1px solid #262a33; color: #aaa; line-height: 1.7; }
-  .kars .alt b { color: #fff; }
-  .modal {
-    position: fixed; inset: 0; display: none;
-    align-items: center; justify-content: center;
-    background: rgba(0,0,0,.65); padding: 20px; z-index: 10;
-  }
-  .modal.acik { display: flex; }
-  .kutu {
-    width: 100%; max-width: 340px; padding: 22px;
-    background: #1a1d24; border: 1px solid #5b1f24; border-radius: 14px; text-align: center;
-  }
-  .kutu .ikon { font-size: 36px; }
-  .kutu h3 { margin: 8px 0 6px; font-size: 18px; color: #ff8a8a; }
-  .kutu p { margin: 0 0 18px; font-size: 14px; color: #bbb; line-height: 1.4; }
-  .kutu .btns { margin-top: 0; }
-  .kutu button { flex: 1; }
-  #iptal { background: #2a2e38; color: #ddd; }
-  #onayla { background: #d33; color: #fff; }
+  .kart:active { background: #20242d; }
+  .kart .b { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 600; }
+  .kart .b span:last-child { color: #555; }
+  .kart .a { margin-top: 8px; font-size: 14px; color: #aaa; line-height: 1.5; }
+  .kart .a b { color: #fff; }
+  .yedek p { margin: 0 0 8px; font-size: 13px; color: #aaa; line-height: 1.5; }
+  .yedek .btns { margin-top: 8px; }
+  .yedek .btns button { flex: 1; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>Performans Puanı</h1>
-  <div id="gunbilgi" style="font-size:13px;color:#8ad;margin:-8px 0 8px"></div>
+  <h1>Çalışma Takibi</h1>
 
-  <label for="tyt" id="tytl">TYT soru (×1)</label>
-  <input id="tyt" type="number" min="0" step="1" value="0" inputmode="numeric">
+  <a class="kart" href="page1.html">
+    <div class="b"><span>📊 Performans</span><span>›</span></div>
+    <div class="a" id="o1"></div>
+  </a>
+  <a class="kart" href="page2.html">
+    <div class="b"><span>📝 Deneme</span><span>›</span></div>
+    <div class="a" id="o2"></div>
+  </a>
+  <a class="kart" href="page3.html">
+    <div class="b"><span>📚 Ders ve Konu</span><span>›</span></div>
+    <div class="a" id="o3"></div>
+  </a>
 
-  <label for="ayt">AYT soru (×1.5)</label>
-  <input id="ayt" type="number" min="0" step="1" value="0" inputmode="numeric">
-
-  <label for="saat">Saat (eşik: 10)</label>
-  <input id="saat" type="number" min="0" step="0.25" value="0" inputmode="decimal">
-
-  <button id="hesapla" class="ana">Hesapla</button>
-
-  <div id="satirlar" style="display:none">
-    <div class="row"><span>efektif soru (eşik: 200)</span><b id="es">0</b></div>
-    <div class="row"><span>puan1 (soru)</span><b id="p1">0.00</b></div>
-    <div class="row"><span>puan2 (saat)</span><b id="p2">0.00</b></div>
-  </div>
-
-  <div class="result">
-    <div class="bekle" id="bekle">Sonucu görmek için Hesapla'ya bas</div>
-    <div id="icerik" style="display:none">
-      <div class="soz" id="soz"></div>
-      <div class="yazar" id="yazar"></div>
-      <div class="big" id="sonuc">0</div>
-      <div class="pct" id="yuzde">%0.0</div>
-      <div class="bar"><div class="fill" id="fill"></div></div>
-    </div>
-  </div>
-
-  <div class="btns">
-    <button id="kaydet" disabled>Kaydet</button>
-    <button id="sil">Son Kaydı Sil</button>
-    <button id="temizle">Tümünü Sil</button>
-  </div>
-  <div id="durum"></div>
-
-  <h2>Sonuç Grafiği</h2>
-  <div class="wrap">
-    <div class="chart" id="chart"></div>
-    <div class="liste" id="liste"></div>
-  </div>
-
-  <h2>Karşılaştırma</h2>
-  <div class="kars" id="kars"></div>
-</div>
-
-<div class="modal" id="modal">
-  <div class="kutu">
-    <div class="ikon">⚠️</div>
-    <h3>Tüm veriler silinecek</h3>
-    <p>Kayıtlı bütün sonuçlar, grafik ve haftalık ortalamalar kalıcı olarak silinecek. Bu işlem geri alınamaz.</p>
+  <h2>Yedek</h2>
+  <div class="panel yedek">
+    <p>Veriler bu tarayıcıda saklanır. Tarayıcı verisi temizlenirse veya başka cihaza geçersen kaybolur. Düzenli yedek al.</p>
     <div class="btns">
-      <button id="iptal">Vazgeç</button>
-      <button id="onayla">Evet, Sil</button>
+      <button class="mavi" id="indir">Dosya olarak indir</button>
+      <button class="gri" id="kopyala">Kopyala</button>
     </div>
+
+    <label for="dosya" style="margin-top:16px">Yedekten yükle</label>
+    <input id="dosya" type="file" accept=".json,application/json" style="font-size:14px;color:#aaa">
+    <textarea id="yedekMetin" placeholder="Yedek metnini buraya yapıştır veya yukarıdan dosya seç" style="margin-top:8px"></textarea>
+    <button class="ana" id="yukle" style="margin-top:8px;background:#2a2e38;color:#ddd">Yedeği İçe Aktar</button>
+    <div id="durum" class="durum"></div>
   </div>
 </div>
 
+<script src="ortak.js"></script>
 <script>
-  const MAX_SONUC = 13;
-  const KEY = 'gunlukPuanKayitlar';
+  navCiz('index');
 
-  // Soru katsayıları: AYT sorusu daha zor olduğu için daha çok sayılır
-  // efektif soru = TYT × TYT_KATSAYI + AYT × AYT_KATSAYI  (eşik: 200)
-  const TYT_KATSAYI = 1;
-  const AYT_KATSAYI = 1.5;
-  // Haftanın 6. ve 7. kaydı (hafta sonu): TYT çarpanı yükselir
-  // Gün, tarihe göre değil kayıt sırasına göre belirlenir (her 7 kayıt = 1 hafta)
-  const TYT_HAFTASONU = 1.5;
+  function ozet() {
+    const P = perfOku(), D = diziOku(ANAHTAR.deneme), S = diziOku(ANAHTAR.ders);
 
-  const tytEl = document.getElementById('tyt');
-  const aytEl = document.getElementById('ayt');
-  const saatEl = document.getElementById('saat');
-  const durumEl = document.getElementById('durum');
+    // performans
+    if (P.length) {
+      const son7 = P.slice(-7);
+      const ort = Math.round(son7.reduce((a, k) => a + k.sonuc, 0) / son7.length);
+      $('o1').innerHTML = `Son sonuç: <b>${P[P.length - 1].sonuc}</b> · son ${son7.length} kayıt ort. <b>${ort}</b><br>` +
+        `Hafta ${Math.floor((P.length - 1) / 7) + 1} · ${P.length} kayıt`;
+    } else $('o1').textContent = 'Henüz kayıt yok';
 
-  function clamp(v, min, max) {
-    v = parseFloat(v);
-    if (isNaN(v)) v = 0;
-    return Math.min(max, Math.max(min, v));
+    // deneme
+    const net = t => { const x = D.filter(k => k.tur === t); return x.length ? x[x.length - 1].net : null; };
+    const tn = net('TYT'), an = net('AYT');
+    $('o2').innerHTML = D.length
+      ? `Son TYT net: <b>${tn == null ? '—' : Number(tn.toFixed(2))}</b> · son AYT net: <b>${an == null ? '—' : Number(an.toFixed(2))}</b><br>${D.length} deneme`
+      : 'Henüz deneme yok';
+
+    // ders / konu
+    if (S.length) {
+      const son = S[S.length - 1].gun || 1;
+      const gunDk = S.filter(k => k.gun === son).reduce((a, k) => a + (k.dk || 0), 0);
+      const top = S.reduce((a, k) => a + (k.dk || 0), 0);
+      $('o3').innerHTML = `Gün ${son}: <b>${fmtSure(gunDk)}</b> · toplam <b>${fmtSure(top)}</b><br>Son konu: ${esc(S[S.length - 1].ders)} · ${esc(S[S.length - 1].konu)}`;
+    } else $('o3').textContent = 'Henüz kayıt yok';
   }
 
-  // Yüzdeyi 0-13 puana çevirir: 0-4.99 -> 0, 5-14.99 -> 1, ... 95-104.99 -> 10 ... 125+ -> 13
-  function yuzdeToPuan(yuzde) {
-    return Math.min(MAX_SONUC, Math.floor(yuzde / 10 + 0.5));
+  // ---- Yedek ----
+  function yedekMetni() {
+    return JSON.stringify({
+      surum: 1,
+      perf: perfOku(),
+      deneme: diziOku(ANAHTAR.deneme),
+      ders: diziOku(ANAHTAR.ders)
+    }, null, 1);
   }
 
-  // ---- Motivasyon: bilim insanlarından sözler (sonuca göre tek söz) ----
-  // 0: sonuç 0-2 | 1: 3-5 | 2: 6-8 | 3: 9 ve üstü
-  const SOZLER = {
-    0: [
-      { q: `Bana bir dayanak noktası verin, dünyayı yerinden oynatayım.`, a: `Arşimet` },
-      { q: `Şans, hazırlıklı zihne gülümser.`, a: `Louis Pasteur` },
-      { q: `Deha yüzde bir ilham, yüzde doksan dokuz terdir.`, a: `Thomas Edison` },
-      { q: `Çalış. Bitir. Yayımla.`, a: `Michael Faraday` },
-      { q: `Hayat bisiklete binmek gibidir; dengeni korumak için hareket etmelisin.`, a: `Albert Einstein` },
-      { q: `Hayat hiçbirimiz için kolay değil. Ama ne olmuş? Sebat etmeli ve her şeyden önce kendimize güvenmeliyiz.`, a: `Marie Curie` }
-    ],
-    1: [
-      { q: `Hedefime ulaşmamı sağlayan sırrı söyleyeyim: gücüm yalnızca azmimdedir.`, a: `Louis Pasteur` },
-      { q: `Yapılmış olanı kimse fark etmez; yalnızca yapılacak olanı görürüz.`, a: `Marie Curie` },
-      { q: `Sonuç mu? Bir sürü sonuç aldım! İşe yaramayan birkaç bin şey öğrendim.`, a: `Thomas Edison` },
-      { q: `Bahsettiğin şeyi ölçüp sayılarla ifade edebiliyorsan, onun hakkında bir şey biliyorsun demektir.`, a: `Lord Kelvin` },
-      { q: `Dildeki en tehlikeli cümle şudur: "Hep böyle yaptık."`, a: `Grace Hopper` },
-      { q: `Doğa kandırılamaz.`, a: `Richard Feynman` }
-    ],
-    2: [
-      { q: `Önemli olan sorgulamayı bırakmamaktır.`, a: `Albert Einstein` },
-      { q: `Bilim, bir bilgi yığınından çok bir düşünme biçimidir.`, a: `Carl Sagan` },
-      { q: `Hayal gücü bilgiden daha önemlidir.`, a: `Albert Einstein` },
-      { q: `Cevapları yanlış olabilecek olmaktansa, bilmeden yaşamayı çok daha ilginç buluyorum.`, a: `Richard Feynman` },
-      { q: `Hayat ne kadar zor görünürse görünsün, yapıp başarabileceğin bir şey her zaman vardır.`, a: `Stephen Hawking` }
-    ],
-    3: [
-      { q: `Daha uzağı görebildiysem, devlerin omuzlarında durduğum içindir.`, a: `Isaac Newton` },
-      { q: `Kendimi, önünde keşfedilmemiş koca bir hakikat okyanusu uzanırken kıyıda çakıl toplayan bir çocuk gibi görüyorum.`, a: `Isaac Newton` },
-      { q: `Ayaklarına değil, yıldızlara bakmayı unutma.`, a: `Stephen Hawking` },
-      { q: `Şimdi onların; ama asıl uğruna çalıştığım gelecek benim.`, a: `Nikola Tesla` },
-      { q: `Başarılı bir insan olmaya çalışma, değerli bir insan olmaya çalış.`, a: `Albert Einstein` }
-    ]
-  };
+  $('indir').addEventListener('click', () => {
+    const blob = new Blob([yedekMetni()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'takip-yedek.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    $('durum').textContent = 'Yedek dosyası indirildi';
+  });
 
-  function tierBul(s) {
-    if (s <= 2) return 0;
-    if (s <= 5) return 1;
-    if (s <= 8) return 2;
-    return 3;
-  }
-
-  const kuyruk = {};
-  const sonSoz = {};
-
-  function karistir(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+  $('kopyala').addEventListener('click', async () => {
+    const m = yedekMetni();
+    $('yedekMetin').value = m;
+    try {
+      await navigator.clipboard.writeText(m);
+      $('durum').textContent = 'Yedek panoya kopyalandı (kutuda da duruyor)';
+    } catch (e) {
+      $('yedekMetin').select();
+      $('durum').textContent = 'Kutudaki metni elle kopyala';
     }
-    return a;
-  }
+  });
 
-  // havuz bitmeden aynı söz gelmez; yeni turda hemen önceki söz tekrar etmez
-  function sozSec(key) {
-    if (!kuyruk[key] || !kuyruk[key].length) {
-      kuyruk[key] = karistir(SOZLER[key].slice());
-      const son = kuyruk[key].length - 1;
-      if (sonSoz[key] && kuyruk[key][son].q === sonSoz[key].q && son > 0) {
-        [kuyruk[key][son], kuyruk[key][0]] = [kuyruk[key][0], kuyruk[key][son]];
-      }
+  $('dosya').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $('yedekMetin').value = r.result; $('durum').textContent = 'Dosya okundu, İçe Aktar\'a bas'; };
+    r.readAsText(f);
+  });
+
+  $('yukle').addEventListener('click', () => {
+    let d;
+    try { d = JSON.parse($('yedekMetin').value); } catch (e) { $('durum').textContent = 'Geçersiz yedek metni'; return; }
+    if (!d || !Array.isArray(d.perf) || !Array.isArray(d.deneme) || !Array.isArray(d.ders)) {
+      $('durum').textContent = 'Yedek biçimi hatalı'; return;
     }
-    sonSoz[key] = kuyruk[key].pop();
-    return sonSoz[key];
-  }
+    const temiz = a => a.filter(k => k && typeof k === 'object');
+    const p = temiz(d.perf), de = temiz(d.deneme), ds = temiz(d.ders);
+    if (!confirm('Mevcut veriler silinip yedektekiler yüklenecek.\nPerformans: ' + p.length + ', Deneme: ' + de.length + ', Ders: ' + ds.length + ' kayıt.\nDevam edilsin mi?')) return;
+    yaz(ANAHTAR.perf, p);
+    yaz(ANAHTAR.deneme, de);
+    yaz(ANAHTAR.ders, ds);
+    $('durum').textContent = 'Yedek yüklendi';
+    ozet();
+  });
 
-  function sozGuncelle(sonuc) {
-    const s = sozSec(tierBul(sonuc));
-    document.getElementById('soz').textContent = '\u201C' + s.q + '\u201D';
-    document.getElementById('yazar').textContent = '\u2014 ' + s.a;
-  }
-
-  let guncel = { soru: 0, saat: 0, yuzde: 0, sonuc: 0 };
-  let hesaplandi = false;
-
-  // girişler değişince sonuç gizlenir, tekrar Hesapla'ya basmak gerekir
-  function sifirla() {
-    hesaplandi = false;
-    document.getElementById('icerik').style.display = 'none';
-    document.getElementById('satirlar').style.display = 'none';
-    document.getElementById('bekle').style.display = '';
-    document.getElementById('kaydet').disabled = true;
-  }
-
-  // yüzde = sqrt(soru oranı × saat oranı) × 100
-  // eşiklerde (200 soru, 10 saat) yüzde = 100 -> sonuç 10
-  function hesapla() {
-    const tyt = clamp(tytEl.value, 0, Infinity);
-    const ayt = clamp(aytEl.value, 0, Infinity);
-    const gun = oku().length % 7 + 1;           // haftanın kaçıncı günü (1-7)
-    const haftasonu = gun >= 6;
-    const tytK = haftasonu ? TYT_HAFTASONU : TYT_KATSAYI;
-    const soru = tyt * tytK + ayt * AYT_KATSAYI; // efektif soru
-    const saat = clamp(saatEl.value, 0, Infinity);
-
-    const puan1 = soru / 200 * 10;
-    const puan2 = saat / 10 * 10;
-    const yuzde = Math.sqrt(puan1 * puan2 / 100) * 100;
-    const sonuc = yuzdeToPuan(yuzde);
-
-    guncel = { soru, tyt, ayt, saat, yuzde, sonuc, haftasonu };
-
-    document.getElementById('es').textContent = Number(soru.toFixed(1)) + ' (TYT ' + tyt + '×' + tytK + ' + AYT ' + ayt + '×' + AYT_KATSAYI + ')';
-    document.getElementById('p1').textContent = puan1.toFixed(2);
-    document.getElementById('p2').textContent = puan2.toFixed(2);
-    document.getElementById('yuzde').textContent = '%' + yuzde.toFixed(1);
-    document.getElementById('sonuc').textContent = sonuc;
-    sozGuncelle(sonuc);
-
-    hesaplandi = true;
-    document.getElementById('bekle').style.display = 'none';
-    document.getElementById('icerik').style.display = '';
-    document.getElementById('satirlar').style.display = '';
-    document.getElementById('kaydet').disabled = false;
-
-    const fill = document.getElementById('fill');
-    fill.style.width = Math.min(100, yuzde) + '%'; // %100'de tam dolu
-    fill.style.background = `hsl(${Math.min(100, yuzde) * 1.2}, 70%, 50%)`;
-  }
-
-  // ---- Kayıt (tarihten bağımsız, sıralı liste) ----
-  function oku() {
-    let v;
-    try { v = JSON.parse(localStorage.getItem(KEY)); }
-    catch (e) { v = window.__kayit; }
-    if (Array.isArray(v)) return v;
-    // eski tarih bazlı kayıtları listeye çevir
-    if (v && typeof v === 'object') {
-      return Object.keys(v).sort().map(k => ({ sonuc: v[k].sonuc, soru: v[k].soru, saat: v[k].saat }));
-    }
-    return [];
-  }
-
-  function yaz(liste) {
-    window.__kayit = liste;
-    try { localStorage.setItem(KEY, JSON.stringify(liste)); } catch (e) {}
-  }
-
-  function kaydet() {
-    if (!hesaplandi) return;
-    const liste = oku();
-    liste.push({ sonuc: guncel.sonuc, soru: guncel.soru, tyt: guncel.tyt, ayt: guncel.ayt, saat: guncel.saat, haftasonu: guncel.haftasonu });
-    yaz(liste);
-    durumEl.textContent = 'Kaydedildi: #' + liste.length + ' → ' + guncel.sonuc;
-    ciz();
-  }
-
-  function sonuncuyuSil() {
-    const liste = oku();
-    if (!liste.length) return;
-    liste.pop();
-    yaz(liste);
-    durumEl.textContent = 'Son kayıt silindi';
-    sifirla();
-    ciz();
-  }
-
-  const modalEl = document.getElementById('modal');
-
-  function temizle() {
-    if (!oku().length) { durumEl.textContent = 'Silinecek kayıt yok'; return; }
-    modalEl.classList.add('acik');
-  }
-
-  function tumunuSil() {
-    window.__kayit = [];
-    try { localStorage.removeItem(KEY); } catch (e) {}
-    modalEl.classList.remove('acik');
-    durumEl.textContent = 'Tüm veriler silindi';
-    sifirla();
-    ciz();
-  }
-
-  // ---- Sağdaki liste + haftalık ortalama (her 7 kayıt) ----
-  function listeCiz(liste) {
-    const el = document.getElementById('liste');
-    if (!liste.length) { el.innerHTML = ''; return; }
-
-    let h = '<div class="lh">Sonuçlar</div>';
-    liste.forEach((k, i) => {
-      h += `<div class="li"><span>#${i + 1}</span><b>${k.sonuc}</b></div>`;
-      if ((i + 1) % 7 === 0) {
-        const hafta = liste.slice(i - 6, i + 1);
-        const ort = Math.round(hafta.reduce((a, x) => a + x.sonuc, 0) / 7);
-        h += `<div class="lw"><span>Hafta ${(i + 1) / 7} ort.</span><b>${ort}</b></div>`;
-      }
-    });
-    const kalan = liste.length % 7;
-    if (kalan) h += `<div class="lk">${kalan}/7</div>`;
-    el.innerHTML = h;
-  }
-
-  // ---- Çizgi grafik (x = kayıt sırası) ----
-  function grafikCiz(liste) {
-    const el = document.getElementById('chart');
-
-    if (!liste.length) {
-      el.innerHTML = '<div class="bos">Henüz kayıt yok</div>';
-      return;
-    }
-
-    const W = 400, H = 220;
-    const L = 30, R = 14, T = 16, B = 30;
-    const iw = W - L - R, ih = H - T - B;
-    const n = liste.length;
-    const x = i => L + (n === 1 ? iw / 2 : i * iw / (n - 1));
-    const y = v => T + ih - (v / MAX_SONUC) * ih;
-
-    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
-
-    for (let v = 0; v <= MAX_SONUC; v += 1) {
-      const major = v % 5 === 0 || v === MAX_SONUC;
-      s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#2a2e38" stroke-width="${major ? 1 : 0.5}"/>`;
-      if (major) s += `<text x="${L - 6}" y="${y(v) + 4}" font-size="10" fill="#888" text-anchor="end">${v}</text>`;
-    }
-
-    const pts = liste.map((k, i) => `${x(i)},${y(k.sonuc)}`).join(' ');
-    s += `<polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linejoin="round"/>`;
-
-    const adim = Math.ceil(n / 7);
-    liste.forEach((k, i) => {
-      s += `<circle cx="${x(i)}" cy="${y(k.sonuc)}" r="4" fill="#3b82f6"/>`;
-      s += `<text x="${x(i)}" y="${y(k.sonuc) - 8}" font-size="10" fill="#e8e8e8" text-anchor="middle">${k.sonuc}</text>`;
-      if (i % adim === 0 || i === n - 1) {
-        s += `<text x="${x(i)}" y="${H - 10}" font-size="10" fill="#888" text-anchor="middle">${i + 1}</text>`;
-      }
-    });
-
-    s += '</svg>';
-    el.innerHTML = s;
-  }
-
-  // ---- Karşılaştırmalar (hafta = 7 kayıt) ----
-  function karsilastirCiz(liste) {
-    const el = document.getElementById('kars');
-    const n = liste.length;
-    if (n < 2) { el.innerHTML = '<div class="bos">Karşılaştırma için en az 2 kayıt gerekli</div>'; return; }
-
-    const ort = (a, f) => a.length ? a.reduce((t, k) => t + (f(k) || 0), 0) / a.length : 0;
-    const stat = a => ({
-      sonuc: ort(a, k => k.sonuc),
-      soru: ort(a, k => k.soru),
-      saat: ort(a, k => k.saat),
-      gun: a.length
-    });
-    const fark = (a, b) => {
-      const x = a - b;
-      if (Math.abs(x) < 0.05) return '<span class="dn">=</span>';
-      return `<span class="${x > 0 ? 'up' : 'dw'}">${x > 0 ? '▲' : '▼'} ${Math.abs(x).toFixed(1)}</span>`;
-    };
-
-    const cw = Math.floor((n - 1) / 7);
-    const cur = stat(liste.slice(cw * 7, n));
-    const prev = cw > 0 ? stat(liste.slice((cw - 1) * 7, cw * 7)) : null;
-
-    const satir = (ad, key) =>
-      `<tr><td>${ad}</td><td>${cur[key].toFixed(1)}</td>` +
-      (prev ? `<td>${prev[key].toFixed(1)}</td><td>${fark(cur[key], prev[key])}</td>` : '<td>—</td><td></td>') + '</tr>';
-
-    let h = `<table><tr><th></th><th>Bu hafta (${cur.gun}/7)</th><th>Geçen</th><th>Fark</th></tr>` +
-      satir('Günlük ort. sonuç', 'sonuc') +
-      satir('Günlük ort. efektif soru', 'soru') +
-      satir('Günlük ort. saat', 'saat') + '</table>';
-
-    const son = liste[n - 1].sonuc, onceki = liste[n - 2].sonuc;
-    const genel = ort(liste, k => k.sonuc);
-    const en = Math.max(...liste.map(k => k.sonuc));
-    const enIdx = liste.findIndex(k => k.sonuc === en) + 1;
-
-    h += `<div class="alt">` +
-      `Son kayıt: <b>${son}</b> (önceki ${onceki}) ${fark(son, onceki)}<br>` +
-      `Genel ortalama: <b>${genel.toFixed(1)}</b> · son kayıt ortalamaya göre ${fark(son, genel)}<br>` +
-      `En iyi gün: <b>${en}</b> (#${enIdx})` +
-      `</div>`;
-    el.innerHTML = h;
-  }
-
-  function ciz() {
-    const liste = oku();
-    listeCiz(liste);
-    grafikCiz(liste);
-    karsilastirCiz(liste);
-
-    // sıradaki kaydın haftadaki günü
-    const gun = liste.length % 7 + 1;
-    const hs = gun >= 6;
-    document.getElementById('gunbilgi').textContent =
-      'Hafta ' + (Math.floor(liste.length / 7) + 1) + ' · Gün ' + gun + '/7' + (hs ? ' · Hafta sonu' : '');
-    document.getElementById('tytl').textContent =
-      'TYT soru (×' + (hs ? TYT_HAFTASONU : TYT_KATSAYI) + (hs ? ', hafta sonu' : '') + ')';
-  }
-
-  tytEl.addEventListener('input', sifirla);
-  aytEl.addEventListener('input', sifirla);
-  saatEl.addEventListener('input', sifirla);
-  document.getElementById('hesapla').addEventListener('click', hesapla);
-  [tytEl, aytEl, saatEl].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') hesapla(); }));
-  document.getElementById('kaydet').addEventListener('click', kaydet);
-  document.getElementById('sil').addEventListener('click', sonuncuyuSil);
-  document.getElementById('temizle').addEventListener('click', temizle);
-  document.getElementById('onayla').addEventListener('click', tumunuSil);
-  document.getElementById('iptal').addEventListener('click', () => modalEl.classList.remove('acik'));
-  modalEl.addEventListener('click', e => { if (e.target === modalEl) modalEl.classList.remove('acik'); });
-
-  sifirla();
-  ciz();
+  ozet();
 </script>
 </body>
 </html>

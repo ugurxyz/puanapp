@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Performans</title>
+<link rel="stylesheet" href="ortak.css">
+<style>
+  .row { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: #aaa; }
+  .row b { color: #fff; }
+  .result { margin-top: 24px; padding: 20px; text-align: center; background: var(--card); border-radius: 12px; }
+  .bekle { padding: 28px 8px; color: #777; font-size: 14px; }
+  .soz {
+    min-height: 44px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; line-height: 1.4; font-style: italic; color: #cfd6e4;
+  }
+  .yazar { margin-bottom: 16px; font-size: 13px; color: #8a94a8; }
+  .big { font-size: 64px; font-weight: 700; line-height: 1; }
+  .pct { margin-top: 8px; color: #aaa; font-size: 16px; }
+  .bar { height: 8px; background: #2a2e38; border-radius: 4px; margin-top: 14px; overflow: hidden; }
+  .fill { height: 100%; width: 0; transition: width .2s, background .2s; }
+  .wrap { display: flex; gap: 8px; align-items: flex-start; }
+  .wrap .chart { flex: 1; min-width: 0; }
+  .liste {
+    width: 112px; max-height: 260px; overflow-y: auto;
+    background: var(--card); border-radius: 12px; padding: 8px; font-size: 13px;
+  }
+  .lh { color: #888; font-size: 12px; margin-bottom: 6px; }
+  .li, .lw { display: flex; justify-content: space-between; padding: 3px 0; }
+  .li span { color: #aaa; }
+  .lw { margin: 4px 0; padding: 5px 6px; border-radius: 6px; background: #1e3a5f; color: #cfe3ff; font-weight: 600; font-size: 12px; }
+  .lk { margin-top: 6px; color: #777; font-size: 12px; text-align: center; }
+  .ipucu { font-size: 12px; color: #777; margin-top: 4px; }
+  .modal {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.65); padding: 20px; z-index: 10;
+  }
+  .modal.acik { display: flex; }
+  .kutu { width: 100%; max-width: 340px; padding: 22px; background: var(--card); border: 1px solid #5b1f24; border-radius: 14px; text-align: center; }
+  .kutu .ikon { font-size: 36px; }
+  .kutu h3 { margin: 8px 0 6px; font-size: 18px; color: #ff8a8a; }
+  .kutu p { margin: 0 0 18px; font-size: 14px; color: #bbb; line-height: 1.4; }
+  .kutu .btns { margin-top: 0; }
+  .kutu button { flex: 1; }
+  #onayla { background: #d33; color: #fff; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Performans Puanı</h1>
+  <div id="gunbilgi" style="font-size:13px;color:#8ad;margin:-8px 0 8px"></div>
+
+  <label for="gun">Haftanın günü</label>
+  <select id="gun"></select>
+  <div class="ipucu">Otomatik seçilir. Bir gün atladıysan buradan düzelt.</div>
+
+  <label for="tyt" id="tytl">TYT soru (×1)</label>
+  <input id="tyt" type="number" min="0" step="1" value="0" inputmode="numeric">
+
+  <label for="ayt">AYT soru (×1.5)</label>
+  <input id="ayt" type="number" min="0" step="1" value="0" inputmode="numeric">
+
+  <label for="dogru">Doğru sayısı <small>(isteğe bağlı)</small></label>
+  <input id="dogru" type="number" min="0" step="1" value="" placeholder="boş bırakabilirsin" inputmode="numeric">
+
+  <label for="saat">Saat (eşik: 10)</label>
+  <input id="saat" type="number" min="0" step="0.25" value="0" inputmode="decimal">
+
+  <button id="hesapla" class="ana">Hesapla</button>
+
+  <div id="satirlar" style="display:none">
+    <div class="row"><span>efektif soru (eşik: 200)</span><b id="es">0</b></div>
+    <div class="row"><span>puan1 (soru)</span><b id="p1">0.00</b></div>
+    <div class="row"><span>puan2 (saat)</span><b id="p2">0.00</b></div>
+    <div class="row" id="dkSatir" style="display:none"><span>doğruluk · çarpan</span><b id="dk"></b></div>
+  </div>
+
+  <div class="result">
+    <div class="bekle" id="bekle">Sonucu görmek için Hesapla'ya bas</div>
+    <div id="icerik" style="display:none">
+      <div class="soz" id="soz"></div>
+      <div class="yazar" id="yazar"></div>
+      <div class="big" id="sonuc">0</div>
+      <div class="pct" id="yuzde">%0.0</div>
+      <div class="bar"><div class="fill" id="fill"></div></div>
+    </div>
+  </div>
+
+  <div class="btns">
+    <button id="kaydet" class="mavi" disabled>Kaydet</button>
+    <button id="sil" class="gri">Son Kaydı Sil</button>
+    <button id="temizle" class="kirmizi">Tümünü Sil</button>
+  </div>
+  <div id="durum" class="durum"></div>
+
+  <h2>Sonuç Grafiği</h2>
+  <div class="wrap">
+    <div class="chart" id="chart"></div>
+    <div class="liste" id="liste"></div>
+  </div>
+
+  <h2>Karşılaştırma</h2>
+  <div class="kars" id="kars"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="kutu">
+    <div class="ikon">⚠️</div>
+    <h3>Tüm performans kayıtları silinecek</h3>
+    <p>Bütün sonuçlar, grafik ve haftalık ortalamalar kalıcı olarak silinecek. Deneme ve ders kayıtlarına dokunulmaz. Bu işlem geri alınamaz.</p>
+    <div class="btns">
+      <button id="iptal" class="gri">Vazgeç</button>
+      <button id="onayla">Evet, Sil</button>
+    </div>
+  </div>
+</div>
+
+<script src="ortak.js"></script>
+<script>
+  navCiz('p1');
+
+  const MAX_SONUC = 13;
+  const K = ANAHTAR.perf;
+
+  // Soru katsayıları: AYT sorusu daha zor olduğu için daha çok sayılır
+  // efektif soru = TYT × tytK + AYT × AYT_KATSAYI  (eşik: 200)
+  const TYT_KATSAYI = 1;
+  const AYT_KATSAYI = 1.5;
+  const TYT_HAFTASONU = 1.5;   // haftanın 6. ve 7. günü
+  const DOGRU_HEDEF = 0.7;     // doğruluk bu oranda ise çarpan 1; üstü bonus, altı kesinti
+
+  const GUNLER = ['1 · Pzt', '2 · Sal', '3 · Çar', '4 · Per', '5 · Cum', '6 · Cmt (hafta sonu)', '7 · Paz (hafta sonu)'];
+
+  const tytEl = $('tyt'), aytEl = $('ayt'), saatEl = $('saat'), dogruEl = $('dogru'), gunEl = $('gun');
+  const durumEl = $('durum'), kaydetBtn = $('kaydet'), modalEl = $('modal');
+  gunEl.innerHTML = GUNLER.map((g, i) => `<option value="${i + 1}">${g}</option>`).join('');
+
+  // Yüzdeyi 0-13 puana çevirir: 0-4.99 -> 0, 5-14.99 -> 1, ... 95-104.99 -> 10 ... 125+ -> 13
+  function yuzdeToPuan(yuzde) {
+    return Math.min(MAX_SONUC, Math.floor(yuzde / 10 + 0.5));
+  }
+
+  // ---- Motivasyon: bilim insanlarından sözler (sonuca göre tek söz) ----
+  const SOZLER = {
+    0: [
+      { q: `Bana bir dayanak noktası verin, dünyayı yerinden oynatayım.`, a: `Arşimet` },
+      { q: `Şans, hazırlıklı zihne gülümser.`, a: `Louis Pasteur` },
+      { q: `Deha yüzde bir ilham, yüzde doksan dokuz terdir.`, a: `Thomas Edison` },
+      { q: `Çalış. Bitir. Yayımla.`, a: `Michael Faraday` },
+      { q: `Hayat bisiklete binmek gibidir; dengeni korumak için hareket etmelisin.`, a: `Albert Einstein` },
+      { q: `Hayat hiçbirimiz için kolay değil. Ama ne olmuş? Sebat etmeli ve her şeyden önce kendimize güvenmeliyiz.`, a: `Marie Curie` }
+    ],
+    1: [
+      { q: `Hedefime ulaşmamı sağlayan sırrı söyleyeyim: gücüm yalnızca azmimdedir.`, a: `Louis Pasteur` },
+      { q: `Yapılmış olanı kimse fark etmez; yalnızca yapılacak olanı görürüz.`, a: `Marie Curie` },
+      { q: `Sonuç mu? Bir sürü sonuç aldım! İşe yaramayan birkaç bin şey öğrendim.`, a: `Thomas Edison` },
+      { q: `Bahsettiğin şeyi ölçüp sayılarla ifade edebiliyorsan, onun hakkında bir şey biliyorsun demektir.`, a: `Lord Kelvin` },
+      { q: `Dildeki en tehlikeli cümle şudur: "Hep böyle yaptık."`, a: `Grace Hopper` },
+      { q: `Doğa kandırılamaz.`, a: `Richard Feynman` }
+    ],
+    2: [
+      { q: `Önemli olan sorgulamayı bırakmamaktır.`, a: `Albert Einstein` },
+      { q: `Bilim, bir bilgi yığınından çok bir düşünme biçimidir.`, a: `Carl Sagan` },
+      { q: `Hayal gücü bilgiden daha önemlidir.`, a: `Albert Einstein` },
+      { q: `Cevapları yanlış olabilecek olmaktansa, bilmeden yaşamayı çok daha ilginç buluyorum.`, a: `Richard Feynman` },
+      { q: `Hayat ne kadar zor görünürse görünsün, yapıp başarabileceğin bir şey her zaman vardır.`, a: `Stephen Hawking` }
+    ],
+    3: [
+      { q: `Daha uzağı görebildiysem, devlerin omuzlarında durduğum içindir.`, a: `Isaac Newton` },
+      { q: `Kendimi, önünde keşfedilmemiş koca bir hakikat okyanusu uzanırken kıyıda çakıl toplayan bir çocuk gibi görüyorum.`, a: `Isaac Newton` },
+      { q: `Ayaklarına değil, yıldızlara bakmayı unutma.`, a: `Stephen Hawking` },
+      { q: `Şimdi onların; ama asıl uğruna çalıştığım gelecek benim.`, a: `Nikola Tesla` },
+      { q: `Başarılı bir insan olmaya çalışma, değerli bir insan olmaya çalış.`, a: `Albert Einstein` }
+    ]
+  };
+
+  function tierBul(s) {
+    if (s <= 2) return 0;
+    if (s <= 5) return 1;
+    if (s <= 8) return 2;
+    return 3;
+  }
+
+  const kuyruk = {}, sonSoz = {};
+
+  function karistir(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // havuz bitmeden aynı söz gelmez; yeni turda hemen önceki söz tekrar etmez
+  function sozSec(key) {
+    if (!kuyruk[key] || !kuyruk[key].length) {
+      kuyruk[key] = karistir(SOZLER[key].slice());
+      const son = kuyruk[key].length - 1;
+      if (sonSoz[key] && kuyruk[key][son].q === sonSoz[key].q && son > 0) {
+        [kuyruk[key][son], kuyruk[key][0]] = [kuyruk[key][0], kuyruk[key][son]];
+      }
+    }
+    sonSoz[key] = kuyruk[key].pop();
+    return sonSoz[key];
+  }
+
+  function sozGuncelle(sonuc) {
+    const s = sozSec(tierBul(sonuc));
+    $('soz').textContent = '“' + s.q + '”';
+    $('yazar').textContent = '— ' + s.a;
+  }
+
+  // ---- Durum ----
+  let guncel = null;
+  let hesaplandi = false;
+
+  // sıradaki kaydın otomatik günü (kayıt sırasına göre)
+  function gunOto() {
+    gunEl.value = String(perfOku().length % 7 + 1);
+    etiketGuncelle();
+  }
+
+  function etiketGuncelle() {
+    const hs = parseInt(gunEl.value, 10) >= 6;
+    $('tytl').textContent = 'TYT soru (×' + (hs ? TYT_HAFTASONU : TYT_KATSAYI) + (hs ? ', hafta sonu' : '') + ')';
+  }
+
+  // girişler değişince sonuç gizlenir, tekrar Hesapla'ya basmak gerekir
+  function sifirla() {
+    hesaplandi = false;
+    $('icerik').style.display = 'none';
+    $('satirlar').style.display = 'none';
+    $('bekle').style.display = '';
+    kaydetBtn.disabled = true;
+  }
+
+  // yüzde = sqrt(soru oranı × saat oranı) × 100 × doğruluk çarpanı (varsa)
+  // eşiklerde (200 efektif soru, 10 saat) yüzde = 100 -> sonuç 10
+  function hesapla() {
+    const tyt = clamp(tytEl.value, 0, Infinity);
+    const ayt = clamp(aytEl.value, 0, Infinity);
+    const gun = parseInt(gunEl.value, 10) || 1;
+    const haftasonu = gun >= 6;
+    const tytK = haftasonu ? TYT_HAFTASONU : TYT_KATSAYI;
+    const soru = tyt * tytK + ayt * AYT_KATSAYI; // efektif soru
+    const saat = clamp(saatEl.value, 0, Infinity);
+
+    // doğru sayısı isteğe bağlı: boşsa çarpan 1
+    const ham = tyt + ayt;
+    let dogru = null, faktor = 1;
+    if (dogruEl.value.trim() !== '') {
+      dogru = Math.min(clamp(dogruEl.value, 0, Infinity), ham);
+      if (ham > 0) faktor = clamp(dogru / ham / DOGRU_HEDEF, 0.6, 1.15);
+    }
+
+    const puan1 = soru / 200 * 10;
+    const puan2 = saat / 10 * 10;
+    const yuzde = Math.sqrt(puan1 * puan2 / 100) * 100 * faktor;
+    const sonuc = yuzdeToPuan(yuzde);
+
+    guncel = { soru, tyt, ayt, saat, yuzde, sonuc, gun, haftasonu, dogru };
+
+    $('es').textContent = Number(soru.toFixed(1)) + ' (TYT ' + tyt + '×' + tytK + ' + AYT ' + ayt + '×' + AYT_KATSAYI + ')';
+    $('p1').textContent = puan1.toFixed(2);
+    $('p2').textContent = puan2.toFixed(2);
+    const dkSatir = $('dkSatir');
+    if (dogru !== null && ham > 0) {
+      dkSatir.style.display = '';
+      $('dk').textContent = '%' + (dogru / ham * 100).toFixed(0) + ' · ×' + faktor.toFixed(2);
+    } else {
+      dkSatir.style.display = 'none';
+    }
+    $('yuzde').textContent = '%' + yuzde.toFixed(1);
+    $('sonuc').textContent = sonuc;
+    sozGuncelle(sonuc);
+
+    hesaplandi = true;
+    $('bekle').style.display = 'none';
+    $('icerik').style.display = '';
+    $('satirlar').style.display = '';
+    kaydetBtn.disabled = false;
+
+    const fill = $('fill');
+    fill.style.width = Math.min(100, yuzde) + '%'; // %100'de tam dolu
+    fill.style.background = `hsl(${Math.min(100, yuzde) * 1.2}, 70%, 50%)`;
+  }
+
+  // ---- Kayıt (tarihten bağımsız, sıralı liste) ----
+  function kaydet() {
+    if (!hesaplandi || !guncel) return;
+    const liste = perfOku();
+    liste.push({
+      sonuc: guncel.sonuc, soru: guncel.soru, tyt: guncel.tyt, ayt: guncel.ayt,
+      saat: guncel.saat, gun: guncel.gun, haftasonu: guncel.haftasonu, dogru: guncel.dogru
+    });
+    yaz(K, liste);
+    // çift kaydı önle: yeniden Hesapla'ya basana kadar Kaydet kapalı
+    hesaplandi = false;
+    kaydetBtn.disabled = true;
+    durumEl.textContent = 'Kaydedildi: #' + liste.length + ' → ' + guncel.sonuc;
+    gunOto();
+    ciz();
+  }
+
+  function sonuncuyuSil() {
+    const liste = perfOku();
+    if (!liste.length) return;
+    liste.pop();
+    yaz(K, liste);
+    durumEl.textContent = 'Son kayıt silindi';
+    sifirla();
+    gunOto();
+    ciz();
+  }
+
+  function temizle() {
+    if (!perfOku().length) { durumEl.textContent = 'Silinecek kayıt yok'; return; }
+    modalEl.classList.add('acik');
+  }
+
+  function tumunuSil() {
+    kaldir(K);
+    modalEl.classList.remove('acik');
+    durumEl.textContent = 'Tüm performans kayıtları silindi';
+    sifirla();
+    gunOto();
+    ciz();
+  }
+
+  // ---- Sağdaki liste + haftalık ortalama (her 7 kayıt) ----
+  function listeCiz(liste) {
+    const el = $('liste');
+    if (!liste.length) { el.innerHTML = ''; return; }
+    let h = '<div class="lh">Sonuçlar</div>';
+    liste.forEach((k, i) => {
+      h += `<div class="li"><span>#${i + 1}</span><b>${k.sonuc}</b></div>`;
+      if ((i + 1) % 7 === 0) {
+        const hafta = liste.slice(i - 6, i + 1);
+        const ort = Math.round(hafta.reduce((a, x) => a + x.sonuc, 0) / 7);
+        h += `<div class="lw"><span>Hafta ${(i + 1) / 7} ort.</span><b>${ort}</b></div>`;
+      }
+    });
+    const kalan = liste.length % 7;
+    if (kalan) h += `<div class="lk">${kalan}/7</div>`;
+    el.innerHTML = h;
+  }
+
+  // ---- Karşılaştırmalar (hafta = 7 kayıt) ----
+  function karsilastirCiz(liste) {
+    const el = $('kars');
+    const n = liste.length;
+    if (n < 2) { el.innerHTML = '<div class="bos">Karşılaştırma için en az 2 kayıt gerekli</div>'; return; }
+
+    // yalnızca değeri olan kayıtların ortalaması (eski kayıtlarda alan olmayabilir)
+    const ort = (a, f) => {
+      const x = a.map(f).filter(v => typeof v === 'number' && !isNaN(v));
+      return x.length ? x.reduce((t, v) => t + v, 0) / x.length : null;
+    };
+    const stat = a => ({
+      sonuc: ort(a, k => k.sonuc),
+      soru: ort(a, k => k.soru),
+      saat: ort(a, k => k.saat),
+      dogruluk: ort(a, k => (k.dogru != null && (k.tyt + k.ayt) > 0) ? 100 * k.dogru / (k.tyt + k.ayt) : null),
+      gun: a.length
+    });
+    const f1 = v => v == null ? '—' : v.toFixed(1);
+
+    const cw = Math.floor((n - 1) / 7);
+    const cur = stat(liste.slice(cw * 7, n));
+    const prev = cw > 0 ? stat(liste.slice((cw - 1) * 7, cw * 7)) : null;
+
+    const satir = (ad, key, fmt, dec) =>
+      `<tr><td>${ad}</td><td>${fmt(cur[key])}</td>` +
+      (prev ? `<td>${fmt(prev[key])}</td><td>${farkHtml(cur[key], prev[key], dec)}</td>` : '<td>—</td><td></td>') + '</tr>';
+    const yuv = v => v == null ? '—' : String(Math.round(v));
+
+    let h = `<table><tr><th></th><th>Bu hafta (${cur.gun}/7)</th><th>Geçen</th><th>Fark</th></tr>` +
+      satir('Haftalık sonuç (tam sayı)', 'sonuc', yuv, 0) +
+      satir('Günlük ort. sonuç', 'sonuc', f1, 1) +
+      satir('Günlük ort. efektif soru', 'soru', f1, 1) +
+      satir('Günlük ort. saat', 'saat', f1, 1) +
+      ((cur.dogruluk != null || (prev && prev.dogruluk != null)) ? satir('Ort. doğruluk %', 'dogruluk', f1, 1) : '') +
+      '</table>';
+
+    const son = liste[n - 1].sonuc, onceki = liste[n - 2].sonuc;
+    const genel = ort(liste, k => k.sonuc);
+    const en = Math.max(...liste.map(k => k.sonuc));
+    const enIdx = liste.findIndex(k => k.sonuc === en) + 1;
+    h += `<div class="alt">` +
+      `Son kayıt: <b>${son}</b> (önceki ${onceki}) ${farkHtml(son, onceki)}<br>` +
+      `Genel ortalama: <b>${genel.toFixed(1)}</b> · son kayıt ortalamaya göre ${farkHtml(son, genel)}<br>` +
+      `En iyi gün: <b>${en}</b> (#${enIdx})</div>`;
+    el.innerHTML = h;
+  }
+
+  function ciz() {
+    const liste = perfOku();
+    listeCiz(liste);
+    cizgiGrafik($('chart'), liste.map(k => k.sonuc), { max: MAX_SONUC, adim: 1, etAdim: 5, fmt: v => v });
+    karsilastirCiz(liste);
+    $('gunbilgi').textContent = 'Hafta ' + (Math.floor(liste.length / 7) + 1) + ' · Kayıt ' + (liste.length % 7 + 1) + '/7';
+  }
+
+  // ---- Olaylar ----
+  [tytEl, aytEl, saatEl, dogruEl].forEach(el => {
+    el.addEventListener('input', sifirla);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') hesapla(); });
+  });
+  gunEl.addEventListener('change', () => { etiketGuncelle(); sifirla(); });
+  $('hesapla').addEventListener('click', hesapla);
+  kaydetBtn.addEventListener('click', kaydet);
+  $('sil').addEventListener('click', sonuncuyuSil);
+  $('temizle').addEventListener('click', temizle);
+  $('onayla').addEventListener('click', tumunuSil);
+  $('iptal').addEventListener('click', () => modalEl.classList.remove('acik'));
+  modalEl.addEventListener('click', e => { if (e.target === modalEl) modalEl.classList.remove('acik'); });
+
+  sifirla();
+  gunOto();
+  ciz();
+</script>
+</body>
+</html>

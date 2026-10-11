@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ders ve Konu</title>
+<link rel="stylesheet" href="ortak.css">
+<style>
+  .gunsec { display: flex; align-items: center; gap: 8px; }
+  .gunsec #gunNo { flex: 1; text-align: center; font-size: 20px; font-weight: 700; }
+  .iki { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+  .iki3 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grup { margin-top: 10px; }
+  .gh { display: flex; justify-content: space-between; font-size: 13px; color: #8ad; padding: 6px 2px; }
+  .gh span:last-child { color: #aaa; }
+  .it { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .it .t { flex: 1; min-width: 0; }
+  .it small { display: block; margin-top: 2px; }
+  .it .rozet { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #1e3a5f; color: #cfe3ff; margin-right: 6px; }
+  .it button { padding: 6px 10px; background: #2a2e38; color: #f87171; font-size: 14px; }
+  .dbar { margin-top: 8px; font-size: 13px; }
+  .dbar .ust { display: flex; justify-content: space-between; color: #ccc; }
+  .dbar .cizgi { height: 8px; background: #2a2e38; border-radius: 4px; margin-top: 4px; overflow: hidden; }
+  .dbar .dolu { height: 100%; background: var(--blue); border-radius: 4px; }
+  .ozet { display: flex; gap: 8px; }
+  .ozet div { flex: 1; text-align: center; background: var(--card); border-radius: 12px; padding: 12px 4px; }
+  .ozet b { display: block; font-size: 18px; }
+  .ozet span { font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Günlük Ders ve Konu</h1>
+
+  <div class="gunsec">
+    <button id="gunEksi" class="gri">−</button>
+    <div id="gunNo">Gün 1</div>
+    <button id="gunArti" class="gri">+ Yeni gün</button>
+  </div>
+
+  <div class="iki3">
+    <div>
+      <label for="ders">Ders</label>
+      <select id="ders"></select>
+    </div>
+    <div>
+      <label for="tur">Sınav</label>
+      <select id="tur"><option>TYT</option><option>AYT</option></select>
+    </div>
+  </div>
+
+  <label for="konu">Konu</label>
+  <input id="konu" type="text" maxlength="60" list="konuListe" placeholder="örn. Vektörler" autocomplete="off">
+  <datalist id="konuListe"></datalist>
+
+  <label for="sure">Süre (dakika)</label>
+  <input id="sure" type="number" min="0" step="5" value="" placeholder="0" inputmode="numeric">
+  <div class="chips" id="chips">
+    <button class="chip" data-d="15">+15</button>
+    <button class="chip" data-d="30">+30</button>
+    <button class="chip" data-d="45">+45</button>
+    <button class="chip" data-d="60">+60</button>
+  </div>
+
+  <div class="iki3">
+    <div>
+      <label for="soru">Soru <small>(isteğe bağlı)</small></label>
+      <input id="soru" type="number" min="0" step="1" value="" placeholder="0" inputmode="numeric">
+    </div>
+    <div>
+      <label for="dogru">Doğru <small>(isteğe bağlı)</small></label>
+      <input id="dogru" type="number" min="0" step="1" value="" placeholder="0" inputmode="numeric">
+    </div>
+  </div>
+
+  <button id="kaydet" class="ana">Kaydet</button>
+  <div id="durum" class="durum"></div>
+
+  <h2>Genel Özet</h2>
+  <div class="ozet" id="ozet"></div>
+
+  <h2>Ders Bazlı Süre</h2>
+  <div class="panel" id="dersBar"></div>
+
+  <h2>Kayıtlar</h2>
+  <div class="panel" id="kayitlar"></div>
+</div>
+
+<script src="ortak.js"></script>
+<script>
+  navCiz('p3');
+
+  const K = ANAHTAR.ders;
+  const DERSLER = ['Matematik', 'Geometri', 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Diğer'];
+  let gunNo = 1;
+
+  $('ders').innerHTML = DERSLER.map(d => `<option>${d}</option>`).join('');
+
+  function baslat() {
+    const l = diziOku(K);
+    gunNo = l.length ? (l[l.length - 1].gun || 1) : 1;
+    gunYaz();
+  }
+  function gunYaz() { $('gunNo').textContent = 'Gün ' + gunNo; }
+
+  // seçili dersin önceki konuları öneri listesinde çıkar
+  function konuListesi() {
+    const d = $('ders').value;
+    const set = [...new Set(diziOku(K).filter(k => k.ders === d).map(k => k.konu))];
+    $('konuListe').innerHTML = set.map(k => `<option value="${esc(k)}">`).join('');
+  }
+
+  function kaydet() {
+    const konu = $('konu').value.trim();
+    const dk = Math.round(clamp($('sure').value, 0, Infinity));
+    if (!konu) { $('durum').textContent = 'Konu gir'; return; }
+    if (dk <= 0) { $('durum').textContent = 'Süre gir'; return; }
+    const soru = Math.round(clamp($('soru').value, 0, Infinity));
+    const dogruHam = $('dogru').value.trim();
+    const dogru = (dogruHam !== '' && soru > 0) ? Math.min(soru, Math.round(clamp(dogruHam, 0, Infinity))) : null;
+
+    const l = diziOku(K);
+    l.push({ id: yeniId(), gun: gunNo, ders: $('ders').value, tur: $('tur').value, konu, dk, soru, dogru });
+    yaz(K, l);
+    ['konu', 'sure', 'soru', 'dogru'].forEach(id => $(id).value = ''); // çift kaydı önler
+    $('durum').textContent = 'Kaydedildi: ' + $('ders').value + ' · ' + konu + ' · ' + fmtSure(dk);
+    konuListesi();
+    ciz();
+  }
+
+  function ciz() {
+    const l = diziOku(K);
+
+    // ---- genel özet ----
+    const topDk = l.reduce((a, k) => a + (k.dk || 0), 0);
+    const topSoru = l.reduce((a, k) => a + (k.soru || 0), 0);
+    const gunSayisi = new Set(l.map(k => k.gun)).size;
+    const dogruluk = (() => {
+      const x = l.filter(k => k.dogru != null && k.soru > 0);
+      const s = x.reduce((a, k) => a + k.soru, 0);
+      return s ? Math.round(100 * x.reduce((a, k) => a + k.dogru, 0) / s) : null;
+    })();
+    $('ozet').innerHTML =
+      `<div><b>${fmtSure(topDk)}</b><span>toplam süre</span></div>` +
+      `<div><b>${topSoru}</b><span>soru</span></div>` +
+      `<div><b>${gunSayisi}</b><span>gün</span></div>` +
+      `<div><b>${dogruluk == null ? '—' : '%' + dogruluk}</b><span>doğruluk</span></div>`;
+
+    // ---- ders bazlı süre ----
+    const m = {};
+    l.forEach(k => { m[k.ders] = (m[k.ders] || 0) + (k.dk || 0); });
+    const sirali = Object.entries(m).sort((a, b) => b[1] - a[1]);
+    const mx = sirali.length ? sirali[0][1] : 1;
+    $('dersBar').innerHTML = sirali.length ? sirali.map(([d, dk]) =>
+      `<div class="dbar"><div class="ust"><span>${esc(d)}</span><span>${fmtSure(dk)}</span></div>` +
+      `<div class="cizgi"><div class="dolu" style="width:${dk / mx * 100}%"></div></div></div>`).join('')
+      : '<div class="bos">Henüz kayıt yok</div>';
+
+    // ---- gün gün liste (yeni gün üstte) ----
+    if (!l.length) { $('kayitlar').innerHTML = '<div class="bos">Henüz kayıt yok</div>'; return; }
+    const gruplar = {};
+    l.forEach(k => { (gruplar[k.gun] = gruplar[k.gun] || []).push(k); });
+    $('kayitlar').innerHTML = Object.keys(gruplar).map(Number).sort((a, b) => b - a).map(g => {
+      const x = gruplar[g];
+      const dk = x.reduce((a, k) => a + (k.dk || 0), 0), s = x.reduce((a, k) => a + (k.soru || 0), 0);
+      return `<div class="grup"><div class="gh"><span>Gün ${g}</span><span>${fmtSure(dk)}${s ? ' · ' + s + ' soru' : ''}</span></div>` +
+        x.slice().reverse().map(k =>
+          `<div class="it"><div class="t"><span class="rozet">${esc(k.tur)}</span>${esc(k.ders)} · ${esc(k.konu)}` +
+          `<small>${fmtSure(k.dk)}${k.soru ? ' · ' + k.soru + ' soru' : ''}` +
+          `${(k.dogru != null && k.soru) ? ' · %' + Math.round(100 * k.dogru / k.soru) + ' doğru' : ''}</small></div>` +
+          `<button data-id="${esc(k.id)}">✕</button></div>`).join('') + '</div>';
+    }).join('');
+  }
+
+  // ---- Olaylar ----
+  $('gunArti').addEventListener('click', () => { gunNo++; gunYaz(); });
+  $('gunEksi').addEventListener('click', () => { if (gunNo > 1) { gunNo--; gunYaz(); } });
+  $('ders').addEventListener('change', konuListesi);
+  $('chips').addEventListener('click', e => {
+    const b = e.target.closest('button[data-d]');
+    if (b) $('sure').value = Math.round(clamp($('sure').value, 0, Infinity)) + parseInt(b.dataset.d, 10);
+  });
+  $('kaydet').addEventListener('click', kaydet);
+  $('kayitlar').addEventListener('click', e => {
+    const b = e.target.closest('button[data-id]');
+    if (!b) return;
+    if (!confirm('Bu kayıt silinsin mi?')) return;
+    yaz(K, diziOku(K).filter(k => k.id !== b.dataset.id));
+    $('durum').textContent = 'Kayıt silindi';
+    konuListesi();
+    ciz();
+  });
+
+  baslat();
+  konuListesi();
+  ciz();
+</script>
+</body>
+</html>
