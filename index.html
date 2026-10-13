@@ -39,6 +39,11 @@
     <div class="a" id="o3"></div>
   </a>
 
+  <a class="kart" href="page4.html">
+    <div class="b"><span>🎬 Video Özeti</span><span>›</span></div>
+    <div class="a" id="o4"></div>
+  </a>
+
   <h2>Yedek</h2>
   <div class="panel yedek">
     <p>Veriler bu tarayıcıda saklanır. Tarayıcı verisi temizlenirse veya başka cihaza geçersen kaybolur. Düzenli yedek al.</p>
@@ -84,6 +89,12 @@
       const top = S.reduce((a, k) => a + (k.dk || 0), 0);
       $('o3').innerHTML = `Gün ${son}: <b>${fmtSure(gunDk)}</b> · toplam <b>${fmtSure(top)}</b><br>Son konu: ${esc(S[S.length - 1].ders)} · ${esc(S[S.length - 1].konu)}`;
     } else $('o3').textContent = 'Henüz kayıt yok';
+
+    // video özetleri
+    const O = diziOku(ANAHTAR.ozet);
+    $('o4').innerHTML = O.length
+      ? `<b>${O.length}</b> özet<br>Son: ${esc(O[O.length - 1].baslik)}`
+      : 'YouTube linkini yapıştır, özetini al';
   }
 
   // ---- Yedek ----
@@ -92,7 +103,8 @@
       surum: 1,
       perf: perfOku(),
       deneme: diziOku(ANAHTAR.deneme),
-      ders: diziOku(ANAHTAR.ders)
+      ders: diziOku(ANAHTAR.ders),
+      ozet: diziOku(ANAHTAR.ozet)
     }, null, 1);
   }
 
@@ -135,10 +147,12 @@
     }
     const temiz = a => a.filter(k => k && typeof k === 'object');
     const p = temiz(d.perf), de = temiz(d.deneme), ds = temiz(d.ders);
+    const oz = Array.isArray(d.ozet) ? temiz(d.ozet) : null; // eski yedeklerde olmayabilir
     if (!confirm('Mevcut veriler silinip yedektekiler yüklenecek.\nPerformans: ' + p.length + ', Deneme: ' + de.length + ', Ders: ' + ds.length + ' kayıt.\nDevam edilsin mi?')) return;
     yaz(ANAHTAR.perf, p);
     yaz(ANAHTAR.deneme, de);
     yaz(ANAHTAR.ders, ds);
+    if (oz) yaz(ANAHTAR.ozet, oz);
     $('durum').textContent = 'Yedek yüklendi';
     ozet();
   });

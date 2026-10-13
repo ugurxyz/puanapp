@@ -1,5 +1,5 @@
 // ---- Ortak yardımcılar (tüm sayfalar) ----
-const ANAHTAR = { perf: 'gunlukPuanKayitlar', deneme: 'denemeKayitlari', ders: 'dersKonuKayitlari' };
+const ANAHTAR = { perf: 'gunlukPuanKayitlar', deneme: 'denemeKayitlari', ders: 'dersKonuKayitlari', ozet: 'videoOzetleri' };
 const bellek = {}; // localStorage çalışmazsa oturum boyunca yedek
 
 const $ = id => document.getElementById(id);
@@ -68,7 +68,8 @@ function navCiz(aktif) {
     ['index.html', '🏠', 'Ana', 'index'],
     ['page1.html', '📊', 'Performans', 'p1'],
     ['page2.html', '📝', 'Deneme', 'p2'],
-    ['page3.html', '📚', 'Ders', 'p3']
+    ['page3.html', '📚', 'Ders', 'p3'],
+    ['page4.html', '🎬', 'Video', 'p4']
   ];
   const el = document.createElement('nav');
   el.className = 'nav';

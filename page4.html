@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Video Özeti</title>
+<link rel="stylesheet" href="ortak.css">
+<style>
+  details.anahtar { background: var(--card); border-radius: 12px; padding: 12px; }
+  details.anahtar summary { cursor: pointer; font-size: 14px; color: #8ad; }
+  details.anahtar p { font-size: 12px; color: #888; line-height: 1.5; margin: 8px 0 0; }
+  details.anahtar a { color: #8ad; }
+  .iki { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .onizle { display: none; gap: 10px; align-items: center; margin-top: 10px; padding: 8px; background: var(--card); border-radius: 10px; }
+  .onizle.acik { display: flex; }
+  .onizle img { width: 96px; border-radius: 6px; }
+  .onizle span { font-size: 12px; color: #888; word-break: break-all; }
+  .sonuc { margin-top: 14px; padding: 16px; background: var(--card); border-radius: 12px; font-size: 14px; line-height: 1.6; }
+  .sonuc h3 { font-size: 15px; margin: 14px 0 6px; color: #cfe3ff; }
+  .sonuc h3:first-child { margin-top: 0; }
+  .sonuc p { margin: 6px 0; }
+  .sonuc ul, .sonuc ol { margin: 6px 0; padding-left: 20px; }
+  .sonuc li { margin: 3px 0; }
+  .sonuc code { background: #2a2e38; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .yukle { text-align: center; color: #8ad; padding: 18px 0; font-size: 14px; }
+  .hata { margin-top: 14px; padding: 12px; background: #3a1e22; color: #ffd0d0; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .gecmis .k { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .gecmis .k:first-child { border-top: 0; }
+  .gecmis img { width: 64px; border-radius: 6px; flex: none; }
+  .gecmis .t { flex: 1; min-width: 0; cursor: pointer; }
+  .gecmis .t b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gecmis .t small { color: #888; }
+  .gecmis button { padding: 6px 10px; background: #2a2e38; color: #f87171; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Video Özeti</h1>
+
+  <details class="anahtar" id="anahtarKutu">
+    <summary id="anahtarDurum">Gemini API anahtarı</summary>
+    <label for="anahtar">API anahtarı</label>
+    <input id="anahtar" type="password" autocomplete="off" placeholder="AIza...">
+    <label for="model">Model</label>
+    <input id="model" type="text" autocomplete="off" placeholder="gemini-2.5-flash">
+    <div class="btns">
+      <button id="anahtarKaydet" class="mavi">Kaydet</button>
+      <button id="anahtarSil" class="gri">Anahtarı Sil</button>
+    </div>
+    <p>Anahtarı <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> adresinden alırsın. Sadece bu tarayıcıda saklanır, yedeğe dahil edilmez. Model adı eskirse buradan güncelle.</p>
+  </details>
+
+  <label for="link">YouTube linki</label>
+  <input id="link" type="text" inputmode="url" autocomplete="off" placeholder="https://www.youtube.com/watch?v=...">
+  <div class="onizle" id="onizle"><img id="kapak" alt=""><span id="vid"></span></div>
+
+  <div class="iki">
+    <div>
+      <label for="stil">Özet türü</label>
+      <select id="stil">
+        <option value="kisa">Kısa özet</option>
+        <option value="detay">Detaylı özet</option>
+        <option value="ders" selected>Ders notu + mini test</option>
+      </select>
+    </div>
+    <div>
+      <label for="dil">Dil</label>
+      <select id="dil">
+        <option>Türkçe</option>
+        <option>English</option>
+      </select>
+    </div>
+  </div>
+
+  <button id="ozetle" class="ana">Özetle</button>
+  <div id="durum" class="durum"></div>
+
+  <div id="cikti"></div>
+
+  <h2 id="gecmisBaslik">Geçmiş</h2>
+  <div class="panel gecmis" id="gecmis"></div>
+</div>
+
+<script src="ortak.js"></script>
+<script>
+  navCiz('p4');
+
+  const KEY_ANAHTAR = 'geminiAnahtar', KEY_MODEL = 'geminiModel';
+  const VARSAYILAN_MODEL = 'gemini-2.5-flash';
+  const K = ANAHTAR.ozet;
+
+  let iptal = null;     // devam eden isteği iptal etmek için
+  let aktifId = null;   // ekranda gösterilen geçmiş kaydı
+
+  // ---- YouTube linki ----
+  function videoId(u) {
+    u = (u || '').trim();
+    const m = u.match(/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  function linkDegisti() {
+    const id = videoId($('link').value);
+    $('onizle').classList.toggle('acik', !!id);
+    if (id) {
+      $('kapak').src = 'https://img.youtube.com/vi/' + id + '/mqdefault.jpg';
+      $('vid').textContent = 'youtube.com/watch?v=' + id;
+    }
+  }
+
+  // ---- Anahtar ----
+  function anahtarGoster() {
+    const a = oku(KEY_ANAHTAR);
+    $('anahtarDurum').textContent = a ? 'Gemini API anahtarı ✓ kayıtlı' : 'Gemini API anahtarı (gerekli)';
+    $('anahtarKutu').open = !a;
+    $('model').value = oku(KEY_MODEL) || '';
+  }
+
+  $('anahtarKaydet').addEventListener('click', () => {
+    const a = $('anahtar').value.trim();
+    const m = $('model').value.trim();
+    if (a) yaz(KEY_ANAHTAR, a);
+    if (m) yaz(KEY_MODEL, m); else kaldir(KEY_MODEL);
+    $('anahtar').value = '';
+    $('durum').textContent = a ? 'Ayarlar kaydedildi' : (m ? 'Model kaydedildi' : 'Model varsayılana döndü');
+    anahtarGoster();
+  });
+  $('anahtarSil').addEventListener('click', () => {
+    kaldir(KEY_ANAHTAR);
+    $('anahtar').value = '';
+    $('durum').textContent = 'Anahtar silindi';
+    anahtarGoster();
+  });
+
+  // ---- Prompt ----
+  function istem(stil, dil) {
+    const taban = `Bu YouTube videosunu izle ve ${dil} dilinde özetle. Videoda olmayan bilgi ekleme. ` +
+      `Yanıtı Markdown ile yaz (## başlık, - madde, **kalın**). İlk satır "## " ile videonun konusunu özetleyen kısa bir başlık olsun. `;
+    const t = {
+      kisa: `Önce tek cümlelik ana fikri yaz, sonra en fazla 7 madde ile önemli noktaları ver.`,
+      detay: `Şu başlıkları kullan: Ana fikir, Bölümler (varsa zaman damgalarıyla), Önemli noktalar, Sonuç. Anlatılan örnekleri ve sayıları atlama.`,
+      ders: `Bunu bir YKS öğrencisi için ders notuna çevir. Şu başlıkları kullan: Konu, Anahtar kavramlar ve tanımlar, Formüller ve kurallar, Örnekler ve ipuçları, Sık yapılan hatalar. ` +
+        `En sonda "Mini test" başlığı altında 5 çoktan seçmeli soru yaz, cevap anahtarını en alta ekle. Videoda ders içeriği yoksa bunu açıkça söyle.`
+    };
+    return taban + t[stil];
+  }
+
+  // ---- Basit Markdown -> HTML (önce kaçışlanır, sonra biçimlenir) ----
+  function md(s) {
+    const il = t => t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+    let out = '', ul = false, ol = false;
+    const kapat = () => { if (ul) { out += '</ul>'; ul = false; } if (ol) { out += '</ol>'; ol = false; } };
+    esc(s).split('\n').forEach(raw => {
+      const l = raw.trim();
+      let m;
+      if ((m = l.match(/^#{1,4}\s+(.*)$/))) { kapat(); out += '<h3>' + il(m[1]) + '</h3>'; }
+      else if ((m = l.match(/^[-*•]\s+(.*)$/))) { if (!ul) { kapat(); out += '<ul>'; ul = true; } out += '<li>' + il(m[1]) + '</li>'; }
+      else if ((m = l.match(/^\d+[.)]\s+(.*)$/))) { if (!ol) { kapat(); out += '<ol>'; ol = true; } out += '<li>' + il(m[1]) + '</li>'; }
+      else if (!l) kapat();
+      else { kapat(); out += '<p>' + il(l) + '</p>'; }
+    });
+    kapat();
+    return out;
+  }
+
+  // ---- Gemini çağrısı ----
+  function hataMetni(status, govde) {
+    const msg = (govde && govde.error && govde.error.message) || '';
+    if (status === 400 && /API key/i.test(msg)) return 'API anahtarı geçersiz. Anahtarı kontrol et.';
+    if (status === 400) return 'İstek reddedildi: ' + msg + '\nVideo gizli, yaş kısıtlı veya çok uzun olabilir. Herkese açık bir video dene.';
+    if (status === 403) return 'Erişim reddedildi. Anahtarın yetkisi veya site kısıtlaması (referrer) bu adresi engelliyor olabilir.';
+    if (status === 404) return 'Model bulunamadı. Ayarlardan model adını güncelle (şu an: ' + (oku(KEY_MODEL) || VARSAYILAN_MODEL) + ').';
+    if (status === 429) return 'Kullanım sınırı doldu. Biraz bekleyip tekrar dene.';
+    return 'Hata (' + status + '): ' + msg;
+  }
+
+  async function ozetle() {
+    const id = videoId($('link').value);
+    const anahtar = oku(KEY_ANAHTAR);
+    if (!anahtar) { $('anahtarKutu').open = true; $('durum').textContent = 'Önce API anahtarını gir'; return; }
+    if (!id) { $('durum').textContent = 'Geçerli bir YouTube linki gir'; return; }
+
+    const stil = $('stil').value, dil = $('dil').value;
+    const model = (oku(KEY_MODEL) || VARSAYILAN_MODEL).replace(/^models\//, '');
+    const url = 'https://www.youtube.com/watch?v=' + id;
+
+    if (iptal) iptal.abort();
+    iptal = new AbortController();
+    const btn = $('ozetle');
+    btn.disabled = true;
+    $('durum').textContent = '';
+    $('cikti').innerHTML = '<div class="sonuc yukle">Video analiz ediliyor… uzun videolarda 1-2 dakika sürebilir.<br><br><button class="gri" id="vazgec">Vazgeç</button></div>';
+    $('vazgec').addEventListener('click', () => { if (iptal) iptal.abort(); });
+
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+        method: 'POST',
+        signal: iptal.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': anahtar },
+        body: JSON.stringify({
+          contents: [{ parts: [{ file_data: { file_uri: url } }, { text: istem(stil, dil) }] }]
+        })
+      });
+      let g = null;
+      try { g = await r.json(); } catch (e) {}
+      if (!r.ok) throw new Error(hataMetni(r.status, g));
+
+      const cand = g && g.candidates && g.candidates[0];
+      const metin = cand && cand.content && cand.content.parts
+        ? cand.content.parts.map(p => p.text || '').join('').trim() : '';
+      if (!metin) {
+        const sebep = (g && g.promptFeedback && g.promptFeedback.blockReason) || (cand && cand.finishReason) || 'bilinmiyor';
+        throw new Error('Özet üretilemedi (neden: ' + sebep + ').');
+      }
+
+      // başlık: ilk "#" satırı
+      const bs = metin.match(/^#{1,4}\s+(.+)$/m);
+      const kayit = { id: yeniId(), vid: id, baslik: bs ? bs[1].replace(/\*\*/g, '').slice(0, 80) : 'Video ' + id, stil, metin };
+      const l = diziOku(K);
+      l.push(kayit);
+      yaz(K, l);
+      goster(kayit);
+      gecmisCiz();
+    } catch (e) {
+      $('cikti').innerHTML = e.name === 'AbortError'
+        ? '<div class="hata">İstek iptal edildi.</div>'
+        : '<div class="hata">' + esc(e.message || 'Bağlantı hatası. İnternetini kontrol et.').replace(/\n/g, '<br>') + '</div>';
+    } finally {
+      btn.disabled = false;
+      iptal = null;
+    }
+  }
+
+  function goster(k) {
+    aktifId = k.id;
+    $('cikti').innerHTML = '<div class="sonuc">' + md(k.metin) + '</div>' +
+      '<div class="btns"><button id="kopyala" class="gri">Kopyala</button>' +
+      '<a href="https://www.youtube.com/watch?v=' + esc(k.vid) + '" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:14px;background:#2a2e38;color:#ccc;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600">Videoyu aç</a></div>';
+    $('kopyala').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(k.metin); $('durum').textContent = 'Kopyalandı'; }
+      catch (e) { $('durum').textContent = 'Kopyalanamadı'; }
+    });
+  }
+
+  // ---- Geçmiş ----
+  const STIL_AD = { kisa: 'Kısa', detay: 'Detaylı', ders: 'Ders notu' };
+
+  function gecmisCiz() {
+    const l = diziOku(K);
+    $('gecmisBaslik').textContent = 'Geçmiş (' + l.length + ')';
+    $('gecmis').innerHTML = l.length ? l.slice().reverse().map(k =>
+      `<div class="k"><img src="https://img.youtube.com/vi/${esc(k.vid)}/default.jpg" alt="">` +
+      `<div class="t" data-id="${esc(k.id)}"><b>${esc(k.baslik)}</b><small>${esc(STIL_AD[k.stil] || '')}</small></div>` +
+      `<button data-sil="${esc(k.id)}">✕</button></div>`).join('')
+      : '<div class="bos">Henüz özet yok</div>';
+  }
+
+  $('gecmis').addEventListener('click', e => {
+    const sil = e.target.closest('button[data-sil]');
+    if (sil) {
+      if (!confirm('Bu özet silinsin mi?')) return;
+      yaz(K, diziOku(K).filter(k => k.id !== sil.dataset.sil));
+      if (aktifId === sil.dataset.sil) $('cikti').innerHTML = '';
+      gecmisCiz();
+      return;
+    }
+    const t = e.target.closest('.t[data-id]');
+    if (t) {
+      const k = diziOku(K).find(x => x.id === t.dataset.id);
+      if (k) { goster(k); $('cikti').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+  });
+
+  // ---- Olaylar ----
+  $('link').addEventListener('input', linkDegisti);
+  $('link').addEventListener('keydown', e => { if (e.key === 'Enter') ozetle(); });
+  $('ozetle').addEventListener('click', ozetle);
+
+  anahtarGoster();
+  gecmisCiz();
+</script>
+</body>
+</html>
